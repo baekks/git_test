@@ -12,7 +12,8 @@
 4. [저장소 Clone 및 연결](#4-저장소-clone-및-연결)
 5. [작업물 Push](#5-작업물-push)
 6. [브랜치 생성 및 작업](#6-브랜치-생성-및-작업)
-7. [Merge 및 Conflict 해결](#7-merge-및-conflict-해결)
+7. [Fetch로 원격 변경사항 가져오기](#7-fetch로-원격-변경사항-가져오기)
+8. [Merge 및 Conflict 해결](#8-merge-및-conflict-해결)
 
 ---
 
@@ -351,9 +352,160 @@ git push -u origin feature/update-version
 
 ---
 
-## 7. Merge 및 Conflict 해결
+## 7. Fetch로 원격 변경사항 가져오기
 
-### 7.1 Pull Request (PR) 생성
+### 7.1 Fetch란?
+
+`git fetch`는 원격 저장소의 변경사항을 **로컬로 다운로드**하되, 현재 작업 중인 파일(워킹 디렉토리)에는 영향을 주지 않는 명령어입니다.
+
+**Pull과의 차이점:**
+
+| 명령어 | 동작 | 워킹 디렉토리 변경 |
+|--------|------|--------------------|
+| `git fetch` | 원격 변경사항 다운로드만 | ❌ 변경 없음 |
+| `git pull` | fetch + merge 자동 수행 | ✅ 변경됨 |
+
+> 팀 협업 시 다른 사람의 작업을 먼저 확인한 후 merge 여부를 결정하고 싶을 때 fetch가 유용합니다.
+
+---
+
+### 7.2 기본 Fetch 명령어
+
+```bash
+# 기본 원격(origin)의 모든 변경사항 가져오기
+git fetch
+
+# 또는 명시적으로 origin 지정
+git fetch origin
+
+# 특정 브랜치만 가져오기
+git fetch origin main
+
+# 특정 원격 저장소의 특정 브랜치 가져오기
+git fetch origin feature/add-colors
+
+# 모든 원격 저장소에서 가져오기
+git fetch --all
+```
+
+---
+
+### 7.3 Fetch 후 변경사항 확인
+
+```bash
+# fetch 후 원격 브랜치 목록 확인
+git branch -r
+
+# 출력 예시:
+#   origin/main
+#   origin/feature/add-colors
+#   origin/feature/update-version
+
+# 로컬과 원격 브랜치 모두 확인
+git branch -a
+
+# 원격 main과 로컬 main의 차이 확인
+git log main..origin/main --oneline
+
+# 출력 예시 (원격에 새 커밋이 있을 때):
+# b3c4d5e feat: 팀원이 추가한 기능
+
+# 변경된 파일 목록 확인
+git diff main origin/main --name-only
+```
+
+---
+
+### 7.4 Fetch 후 Merge
+
+fetch로 가져온 내용을 확인한 뒤, 문제가 없으면 merge합니다.
+
+```bash
+# 1. 원격 변경사항 가져오기
+git fetch origin
+
+# 2. 차이 확인
+git log main..origin/main --oneline
+
+# 3. 이상 없으면 merge
+git merge origin/main
+
+# 또는 위 3단계를 한 번에 (= git pull)
+git pull origin main
+```
+
+---
+
+### 7.5 Fetch로 원격 브랜치 로컬에 가져오기
+
+팀원이 새로 만든 브랜치를 로컬에서 작업하고 싶을 때:
+
+```bash
+# 원격 브랜치 목록 갱신
+git fetch origin
+
+# 원격 브랜치 기반으로 로컬 브랜치 생성 및 체크아웃
+git checkout -b feature/new-feature origin/feature/new-feature
+
+# 또는 최신 Git (2.23+)
+git switch -c feature/new-feature origin/feature/new-feature
+
+# 원격 브랜치 추적 확인
+git branch -vv
+
+# 출력 예시:
+# * feature/new-feature  a1b2c3d [origin/feature/new-feature] feat: 새 기능
+#   main                 e4f5g6h [origin/main] initial commit
+```
+
+---
+
+### 7.6 삭제된 원격 브랜치 정리
+
+원격에서 삭제된 브랜치가 로컬 목록에 남아 있을 때 정리합니다.
+
+```bash
+# 원격에서 삭제된 브랜치 참조 제거
+git fetch --prune
+
+# 또는 줄여서
+git fetch -p
+
+# 항상 prune 옵션을 자동 적용하려면
+git config --global fetch.prune true
+```
+
+**출력 예시:**
+```
+From https://github.com/username/my-project
+ - [deleted]         (none)     -> origin/feature/old-branch
+```
+
+---
+
+### 7.7 Fetch 활용 시나리오 요약
+
+```bash
+# 시나리오 1: 팀원 작업 내용 확인 후 merge
+git fetch origin
+git log main..origin/main --oneline   # 무슨 커밋이 왔는지 확인
+git diff main origin/main             # 코드 변경 내용 확인
+git merge origin/main                 # 문제 없으면 merge
+
+# 시나리오 2: 팀원의 새 브랜치 로컬에서 작업
+git fetch origin
+git checkout -b feature/login origin/feature/login
+
+# 시나리오 3: 원격 삭제 브랜치 정리 후 최신화
+git fetch --prune
+git pull origin main
+```
+
+---
+
+## 8. Merge 및 Conflict 해결
+
+### 8.1 Pull Request (PR) 생성
 
 **GitHub 웹사이트에서:**
 
@@ -382,7 +534,7 @@ git push -u origin feature/update-version
 Closes #123
 ```
 
-### 7.2 첫 번째 PR Merge (충돌 없음)
+### 8.2 첫 번째 PR Merge (충돌 없음)
 
 ```bash
 # 로컬에서 main으로 이동
@@ -400,7 +552,7 @@ git merge feature/add-colors
 #  1 file changed, 15 insertions(+)
 ```
 
-### 7.3 원격 저장소에 Merge된 내용 Push
+### 8.3 원격 저장소에 Merge된 내용 Push
 
 ```bash
 # main에 Merge된 내용 Push
@@ -410,7 +562,7 @@ git push origin main
 git log --oneline -5
 ```
 
-### 7.4 두 번째 PR에서 Conflict 발생 시뮬레이션
+### 8.4 두 번째 PR에서 Conflict 발생 시뮬레이션
 
 ```bash
 # main 브랜치에서 feature/update-version을 Merge 시도
@@ -429,9 +581,9 @@ Automatic merge failed; fix conflicts and then commit the result.
 
 ---
 
-## 8. Merge Conflict 해결 방법
+## 9. Merge Conflict 해결 방법
 
-### 8.1 Conflict 상태 확인
+### 9.1 Conflict 상태 확인
 
 ```bash
 # Conflict 상태 확인
@@ -448,7 +600,7 @@ git status
 #           both modified:   dummy_personal_data.md
 ```
 
-### 8.2 Conflict 파일 내용 확인
+### 9.2 Conflict 파일 내용 확인
 
 ```bash
 # Conflict가 있는 파일 확인
@@ -475,7 +627,7 @@ cat dummy_personal_data.md
 - `=======`: 구분선
 - `>>>>>>> feature/update-version`: 병합할 브랜치 내용 끝
 
-### 8.3 Conflict 해결 - 방법 1: 수동 편집
+### 9.3 Conflict 해결 - 방법 1: 수동 편집
 
 ```bash
 # 에디터에서 파일 열기 (VS Code 권장)
@@ -505,7 +657,7 @@ code dummy_personal_data.md
 - v3.0: 최종 버전 (검증 완료)
 ```
 
-### 8.4 Conflict 해결 - 방법 2: Git 명령어 사용
+### 9.4 Conflict 해결 - 방법 2: Git 명령어 사용
 
 **현재 브랜치 선택:**
 ```bash
@@ -519,7 +671,7 @@ git checkout --ours dummy_personal_data.md
 git checkout --theirs dummy_personal_data.md
 ```
 
-### 8.5 Conflict 해결 - 방법 3: VS Code Merge Editor 사용
+### 9.5 Conflict 해결 - 방법 3: VS Code Merge Editor 사용
 
 VS Code에서 자동으로 제공하는 병합 UI 사용:
 
@@ -532,7 +684,7 @@ VS Code에서 자동으로 제공하는 병합 UI 사용:
 - **Accept Both Changes**: 두 내용 모두 포함
 - **Compare**: 변경사항 비교
 
-### 8.6 Conflict 해결 - Merge 완료
+### 9.6 Conflict 해결 - Merge 완료
 
 ```bash
 # 파일 Staging (충돌 해결 표시)
@@ -550,7 +702,7 @@ git status
 #         modified:   dummy_personal_data.md
 ```
 
-### 8.7 Merge Commit 생성
+### 9.7 Merge Commit 생성
 
 ```bash
 # Merge 커밋 생성
@@ -564,7 +716,7 @@ Resolved conflict in dummy_personal_data.md
 git commit
 ```
 
-### 8.8 원격 저장소에 Push
+### 9.8 원격 저장소에 Push
 
 ```bash
 # Merge 완료된 내용 Push
@@ -576,9 +728,9 @@ git log --oneline -5
 
 ---
 
-## 9. Merge 취소하기 (필요한 경우)
+## 10. Merge 취소하기 (필요한 경우)
 
-### 9.1 Merge 중단 (아직 커밋 전)
+### 10.1 Merge 중단 (아직 커밋 전)
 
 ```bash
 # Merge 취소
@@ -588,7 +740,7 @@ git merge --abort
 git reset --hard HEAD
 ```
 
-### 9.2 Merge 커밋 취소 (이미 커밋함)
+### 10.2 Merge 커밋 취소 (이미 커밋함)
 
 ```bash
 # 이전 커밋으로 되돌리기
@@ -602,9 +754,9 @@ git revert -m 1 a1b2c3d
 
 ---
 
-## 10. 기타 유용한 Git 명령어
+## 11. 기타 유용한 Git 명령어
 
-### 10.1 브랜치 관리
+### 11.1 브랜치 관리
 
 ```bash
 # 모든 로컬 브랜치 조회
@@ -623,7 +775,7 @@ git branch -D feature/add-colors
 git push origin --delete feature/add-colors
 ```
 
-### 10.2 커밋 이력 조회
+### 11.2 커밋 이력 조회
 
 ```bash
 # 최근 5개 커밋 조회
@@ -639,7 +791,7 @@ git log --oneline dummy_personal_data.md
 git show <commit-hash>
 ```
 
-### 10.3 변경사항 확인
+### 11.3 변경사항 확인
 
 ```bash
 # 인덱스(Staging)에 포함되지 않은 변경사항
@@ -655,7 +807,7 @@ git diff dummy_personal_data.md
 git diff main feature/add-colors
 ```
 
-### 10.4 커밋 수정
+### 11.4 커밋 수정
 
 ```bash
 # 마지막 커밋 메시지 수정
@@ -671,7 +823,7 @@ git revert <commit-hash>
 
 ---
 
-## 11. Conflict 해결 체크리스트
+## 12. Conflict 해결 체크리스트
 
 Conflict 상황을 대비한 체크리스트:
 
@@ -691,9 +843,9 @@ Conflict 상황을 대비한 체크리스트:
 
 ---
 
-## 12. 트러블슈팅
+## 13. 트러블슈팅
 
-### 12.1 "fatal: unable to access repository"
+### 13.1 "fatal: unable to access repository"
 
 **원인:** 인증 정보 오류
 
@@ -712,7 +864,7 @@ git remote set-url origin https://github.com/username/my-project.git
 git push
 ```
 
-### 12.2 "Your branch is ahead of 'origin/main'"
+### 13.2 "Your branch is ahead of 'origin/main'"
 
 **원인:** 로컬 커밋이 원격보다 앞서 있음
 
@@ -722,7 +874,7 @@ git push
 git push origin main
 ```
 
-### 12.3 "You have unmerged paths"
+### 13.3 "You have unmerged paths"
 
 **원인:** 아직 Conflict이 해결되지 않음
 
@@ -740,7 +892,7 @@ git add .
 git commit -m "Resolve merge conflict"
 ```
 
-### 12.4 "Permission denied (publickey)"
+### 13.4 "Permission denied (publickey)"
 
 **원인:** SSH 키 설정 누락
 
@@ -756,9 +908,9 @@ ssh-keygen -t ed25519 -C "your.email@example.com"
 
 ---
 
-## 13. 권장 Git 작업 흐름 (Git Flow)
+## 14. 권장 Git 작업 흐름 (Git Flow)
 
-### 13.1 전체 작업 과정
+### 14.1 전체 작업 과정
 
 ```
 1. main에서 브랜치 생성
@@ -811,13 +963,14 @@ ssh-keygen -t ed25519 -C "your.email@example.com"
 | **작업** | `git add`, `git commit` | 파일 수정 및 커밋 |
 | **Push** | `git push origin main` | 원격에 업로드 |
 | **브랜치** | `git checkout -b` | 새로운 브랜치 생성 |
+| **Fetch** | `git fetch origin` | 원격 변경사항 다운로드 (병합 없음) |
 | **Merge** | `git merge` | 브랜치 병합 |
 | **Conflict** | 수동 편집 또는 `git checkout` | 충돌 해결 |
 
 ---
 
 **작성일**: 2024년 3월 21일  
-**버전**: 1.0  
+**버전**: 1.1  
 **마지막 업데이트**: 2024년 3월 21일
 
 <span style="color:green">✅ 이 가이드를 따라하면 GitHub 협업의 모든 과정을 완벽하게 이해할 수 있습니다!</span>
